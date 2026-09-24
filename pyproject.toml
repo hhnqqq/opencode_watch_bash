@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opencode-watch-bash"
+version = "0.1.0"
+description = "Run a shell command and stream its output live into a watch panel, with timeout and end-of-run summary."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "hehaonan" }]
+requires-python = ">=3.8"
+keywords = ["cli", "watch", "shell", "stream", "timeout"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development",
+    "Topic :: System :: Shells",
+]
+
+[project.scripts]
+opencode-watch-bash = "opencode_watch_bash.cli:main"
+owatch = "opencode_watch_bash.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["opencode_watch_bash*"]
