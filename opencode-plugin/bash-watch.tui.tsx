@@ -230,6 +230,11 @@ const tui = async (api: any) => {
     })
 
     let scrollBox: any
+    const contentWidth = createMemo(() => {
+      let w = 0
+      for (const line of tracker.lines()) if (line.length > w) w = line.length
+      return Math.min(Math.max(w + 1, 10), 400)
+    })
     createEffect(
       on(
         () => visible()?.id,
@@ -270,7 +275,9 @@ const tui = async (api: any) => {
               stickyStart="bottom"
               scrollbarOptions={{ showArrows: true }}
             >
-              <For each={tracker.lines()}>{(line) => <text fg={theme().text} wrapMode="none">{line}</text>}</For>
+              <box width={contentWidth()} flexDirection="column">
+                <For each={tracker.lines()}>{(line) => <text fg={theme().text} wrapMode="none">{line}</text>}</For>
+              </box>
             </scrollbox>
             <text fg={statusColor()}>{statusLine()}</text>
           </Show>
