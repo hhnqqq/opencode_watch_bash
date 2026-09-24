@@ -106,6 +106,8 @@ The original form of this tool: two plugin files for [opencode](https://opencode
 
 The output area is a two-dimensional scrollbox: mouse wheel scrolls up/down through the tail (up to 500 lines), Shift+wheel or the scrollbar arrows scroll left/right for long lines, and while the command is running the view auto-follows new output (sticky scroll).
 
+The panel height is adjustable: click the `⤢` button next to the close `✕` to cycle the viewport height (10 → 20 → 40 rows). The preference is remembered across sessions. The panel width is fixed by the opencode sidebar (42 columns, hardcoded in opencode's TUI); horizontal scrolling exists to compensate.
+
 ### Install
 
 Copy the two files into your opencode config directories (rename the TUI file

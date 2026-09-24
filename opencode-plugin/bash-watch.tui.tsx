@@ -6,6 +6,7 @@ import path from "node:path"
 const STREAMS_DIR = path.join(os.homedir(), ".local", "state", "opencode", "bash-watch", "streams")
 const POLL_MS = 500
 const VIEWPORT_ROWS = 10
+const VIEWPORT_STEPS = [10, 20, 40]
 const MAX_LINES = 500
 const MAX_WIDTH = 36
 const TAIL_BYTES = 262144
@@ -63,6 +64,15 @@ function tailLines(text: string): string[] {
 
 function sessionDir(sessionID: string) {
   return path.join(STREAMS_DIR, sessionID)
+}
+
+function readViewportRows(api: any): number {
+  try {
+    const value = api.kv.get("bash-watch.viewportRows", VIEWPORT_ROWS)
+    return VIEWPORT_STEPS.includes(value) ? value : VIEWPORT_ROWS
+  } catch {
+    return VIEWPORT_ROWS
+  }
 }
 
 function createTracker(sessionID: string) {
@@ -230,11 +240,19 @@ const tui = async (api: any) => {
     })
 
     let scrollBox: any
+    const viewportRows = createSignal<number>(readViewportRows(api))
     const contentWidth = createMemo(() => {
       let w = 0
       for (const line of tracker.lines()) if (line.length > w) w = line.length
       return Math.min(Math.max(w + 1, 10), 400)
     })
+    const cycleViewportRows = () => {
+      const next = VIEWPORT_STEPS[(VIEWPORT_STEPS.indexOf(viewportRows[0]()) + 1) % VIEWPORT_STEPS.length]
+      viewportRows[1](next)
+      try {
+        api.kv.set("bash-watch.viewportRows", next)
+      } catch {}
+    }
     createEffect(
       on(
         () => visible()?.id,
@@ -257,18 +275,21 @@ const tui = async (api: any) => {
                 <text fg={theme().textMuted}>{clip(headerLabel())}</text>
               </Show>
             </box>
+            <box onMouseDown={() => cycleViewportRows()}>
+              <text fg={theme().textMuted}>⤢{viewportRows[0]()}</text>
+            </box>
             <box onMouseDown={() => tracker.setClosedId(visible()?.id)}>
               <text fg={theme().textMuted}>✕</text>
             </box>
           </box>
           <Show when={!tracker.collapsed()}>
             <text fg={theme().textMuted}>$ {clip(visible()!.command.split("\n")[0])}</text>
-            <Show when={tracker.lines().length > VIEWPORT_ROWS}>
+            <Show when={tracker.lines().length > viewportRows[0]()}>
               <text fg={theme().textMuted}>{tracker.lines().length} lines</text>
             </Show>
             <scrollbox
               ref={(r: any) => (scrollBox = r)}
-              height={VIEWPORT_ROWS}
+              height={viewportRows[0]()}
               scrollX={true}
               scrollY={true}
               stickyScroll={true}
