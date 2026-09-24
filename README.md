@@ -104,6 +104,8 @@ The original form of this tool: two plugin files for [opencode](https://opencode
 - `bash-watch.ts` — a server plugin that registers the `bash_watch` tool: spawns the command, streams stdout+stderr to a log file, honors `timeout_seconds`, and writes a small JSON manifest next to the log
 - `bash-watch.tui.tsx` — a TUI plugin that registers the sidebar Watch panel: polls the streams directory, renders the live tail, status, elapsed time; click the header to collapse, `✕` to close the panel
 
+The output area is a two-dimensional scrollbox: mouse wheel scrolls up/down through the tail (up to 500 lines), Shift+wheel or the scrollbar arrows scroll left/right for long lines, and while the command is running the view auto-follows new output (sticky scroll).
+
 ### Install
 
 Copy the two files into your opencode config directories (rename the TUI file

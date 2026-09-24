@@ -1,13 +1,14 @@
-import { createMemo, createSignal, For, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, on, Show } from "solid-js"
 import * as fsp from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 
 const STREAMS_DIR = path.join(os.homedir(), ".local", "state", "opencode", "bash-watch", "streams")
 const POLL_MS = 500
-const MAX_LINES = 14
+const VIEWPORT_ROWS = 10
+const MAX_LINES = 500
 const MAX_WIDTH = 36
-const TAIL_BYTES = 65536
+const TAIL_BYTES = 262144
 const KEEP_AFTER_END_MS = 2 * 60 * 60 * 1000
 
 type StreamStatus = "running" | "done" | "error" | "timeout" | "aborted"
@@ -67,7 +68,6 @@ function sessionDir(sessionID: string) {
 function createTracker(sessionID: string) {
   const [current, setCurrent] = createSignal<Manifest | undefined>(undefined)
   const [lines, setLines] = createSignal<string[]>([])
-  const [hidden, setHidden] = createSignal(0)
   const [closedId, setClosedId] = createSignal<string | undefined>(undefined)
   const [collapsed, setCollapsed] = createSignal(false)
   const [tick, setTick] = createSignal(0)
@@ -104,13 +104,16 @@ function createTracker(sessionID: string) {
         seenId = latest.id
         setCollapsed(false)
       }
-      setCurrent(latest)
+      setCurrent((prev) =>
+        prev && latest && prev.id === latest.id && prev.status === latest.status && prev.exit === latest.exit && prev.ended === latest.ended
+          ? prev
+          : latest,
+      )
       if (latest) {
         const text = await readTail(path.join(dir, `${latest.id}.log`))
         if (stopped) return
         const all = tailLines(text)
         setLines(all.slice(-MAX_LINES))
-        setHidden(Math.max(0, all.length - MAX_LINES))
       }
       setTick((t) => t + 1)
     } catch {}
@@ -122,7 +125,6 @@ function createTracker(sessionID: string) {
   return {
     current,
     lines,
-    hidden,
     closedId,
     setClosedId,
     collapsed,
@@ -227,6 +229,16 @@ const tui = async (api: any) => {
       return visible()?.status === "done" ? t.success : running() ? t.textMuted : t.error
     })
 
+    let scrollBox: any
+    createEffect(
+      on(
+        () => visible()?.id,
+        (id) => {
+          if (id && scrollBox) scrollBox.scrollTo(0)
+        },
+      ),
+    )
+
     return (
       <Show when={visible()} fallback={<box></box>}>
         <box>
@@ -246,10 +258,20 @@ const tui = async (api: any) => {
           </box>
           <Show when={!tracker.collapsed()}>
             <text fg={theme().textMuted}>$ {clip(visible()!.command.split("\n")[0])}</text>
-            <Show when={tracker.hidden() > 0}>
-              <text fg={theme().textMuted}>+{tracker.hidden()} earlier lines</text>
+            <Show when={tracker.lines().length > VIEWPORT_ROWS}>
+              <text fg={theme().textMuted}>{tracker.lines().length} lines</text>
             </Show>
-            <For each={tracker.lines()}>{(line) => <text fg={theme().text}>{clip(line)}</text>}</For>
+            <scrollbox
+              ref={(r: any) => (scrollBox = r)}
+              height={VIEWPORT_ROWS}
+              scrollX={true}
+              scrollY={true}
+              stickyScroll={true}
+              stickyStart="bottom"
+              scrollbarOptions={{ showArrows: true }}
+            >
+              <For each={tracker.lines()}>{(line) => <text fg={theme().text} wrapMode="none">{line}</text>}</For>
+            </scrollbox>
             <text fg={statusColor()}>{statusLine()}</text>
           </Show>
         </box>
